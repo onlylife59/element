@@ -18,6 +18,7 @@
   import TreeStore from './model/tree-store';
   import {t} from 'element-ui/src/locale';
   import emitter from 'element-ui/src/mixins/emitter';
+  import v3platform from 'element-ui/src/utils/v3platform';
 
   export default {
     name: 'ElTree',
@@ -86,7 +87,8 @@
       indent: {
         type: Number,
         default: 16
-      }
+      },
+      entityCode: String
     },
 
     computed: {
@@ -150,6 +152,33 @@
       handleNodeExpand(nodeData, node, instance) {
         this.broadcast('ElTreeNode', 'tree-node-expand', node);
         this.$emit('node-expand', nodeData, node, instance);
+      },
+      getTreeNode(data) {
+        let children = this.$children;
+        if (children && children.length > 0) {
+          let iter = function(data, parent) {
+            if (parent.node && (parent.node.data.id === data.id)) {
+              return parent;
+            } else {
+              let list = parent.$children;
+              if (list && list.length > 0) {
+                for (let j = 0, l = list.length; j < l; j++) {
+                  let item = list[j];
+                  let rs = iter(data, item);
+                  if (rs) {
+                    return rs;
+                  }
+                }
+              }
+            }
+          };
+          for (let i = 0, len = children.length; i < len; i++) {
+            let child = iter(data, children[i]);
+            if (child) {
+              return child;
+            }
+          }
+        }
       }
     },
 
@@ -172,6 +201,37 @@
       });
 
       this.root = this.store.root;
+      if (this.showCheckbox) {
+        v3platform.markDsMultipleSelect(this, this.entityCode);
+      }
+      v3platform.registerCurrentHandler(this, (function(_this) {
+          return function(entityCode, current) {
+              if (_this.entityCode === entityCode) {
+                   _this.$nextTick(function() {
+                      let data = current.toMap();
+                      let node = _this.getTreeNode(data);
+                      if (node) {
+                        node.handleCurrentChange();
+                      }
+                  });
+              }
+          };
+      })(this));
+      v3platform.registerSelectHandler(this, (function(_this) {
+          return function(entityCode, records, isSel) {
+              if (_this.entityCode === entityCode) {
+                  _this.$nextTick(function() {
+                      for (let i = 0, len = records.length; i < len; i++) {
+                          let data = records[i].toMap();
+                          let node = _this.store.getNodeFromTree(data);
+                          if (node) {
+                            node.setChecked(isSel, false);
+                          }
+                      }
+                  });
+              }
+          };
+      })(this));
     }
   };
 </script>

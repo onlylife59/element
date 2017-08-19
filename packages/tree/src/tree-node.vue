@@ -2,6 +2,7 @@
   <div class="el-tree-node"
     @click.stop="handleClick"
     v-show="node.visible"
+    @dblclick.stop="handleDbClick"
     :class="{
       'is-expanded': childNodeRendered && expanded,
       'is-current': tree.store.currentNode === node,
@@ -48,6 +49,7 @@
   import ElCollapseTransition from 'element-ui/src/transitions/collapse-transition';
   import ElCheckbox from 'element-ui/packages/checkbox';
   import emitter from 'element-ui/src/mixins/emitter';
+  import v3platform from 'element-ui/src/utils/v3platform';
 
   export default {
     name: 'ElTreeNode',
@@ -127,6 +129,7 @@
       },
 
       handleSelectChange(checked, indeterminate) {
+        v3platform.synSelectRecordToDs(this, this.tree.entityCode, this.node.data, checked);
         if (this.oldChecked !== checked && this.oldIndeterminate !== indeterminate) {
           this.tree.$emit('check-change', this.node.data, checked, indeterminate);
         }
@@ -134,15 +137,28 @@
         this.indeterminate = indeterminate;
       },
 
-      handleClick() {
+      handleCurrentChange() {
         const store = this.tree.store;
+        let currentChanged = store.currentNode!==this.node;
         store.setCurrentNode(this.node);
-        this.tree.$emit('current-change', store.currentNode ? store.currentNode.data : null, store.currentNode);
         this.tree.currentNode = this;
+        if (currentChanged) {
+          v3platform.synCurrentRecordToDs(this, this.tree.entityCode, this.node.data);
+          this.tree.$emit('current-change', store.currentNode ? store.currentNode.data : null, store.currentNode);
+        }
+      },
+
+      handleClick() {
+        this.handleCurrentChange();
         if (this.tree.expandOnClickNode) {
           this.handleExpandIconClick();
         }
         this.tree.$emit('node-click', this.node.data, this.node, this);
+      },
+
+      handleDbClick() {
+        this.handleCurrentChange();
+        this.tree.$emit('node-dbclick', this.node.data, this.node, this);
       },
 
       handleExpandIconClick() {

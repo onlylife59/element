@@ -74,6 +74,26 @@ export default class TreeStore {
     return this.nodesMap[key];
   }
 
+  getNodeFromTree(data, parent) {
+    parent = parent || this.root;
+    if (parent) {
+      if ((parent !== this.root) && (parent.data.id === data.id)) {
+        return parent;
+      } else {
+        let children = parent.childNodes;
+        if (children && children.length > 0) {
+          for (let i = 0, len = children.length; i < len; i++) {
+            let node = this.getNodeFromTree(data, children[i]);
+            if (node) {
+              return node;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   insertBefore(data, refData) {
     const refNode = this.getNode(refData);
     refNode.parent.insertBefore({ data }, refNode);
